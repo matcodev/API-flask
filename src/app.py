@@ -1,8 +1,9 @@
+from os import access
 from flask import Flask, request, jsonify, render_template
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token
 from flask_cors import CORS
-from models import User, db
+from models import Usuarios, db, Clientes, Reserva, Servicios, UsuarioServicios, EstadoReserva
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
@@ -16,30 +17,126 @@ Migrate(app, db) #init, migrate, upgrade
 jwt = JWTManager(app)
 CORS(app)
 
+@app.route("/login", methods=['POST'])
+def create_token():
+    email = request.json.get("email")
+    contrasena = request.json.get("contrasena")
 
-@app.route('/')
-def main():
-    return render_template('index.html')
+    user = Usuarios.query.filter(Usuarios.email == email, Usuarios.contrasena == contrasena).first()
 
-@app.route('/api/register', methods=['POST'])
-def register():
-    if request.method == 'POST':
-        username = request.json.get('username')
-        password = request.json.get('password')
+    if user == None:
+        return jsonify({
+            "estado": "desactivado",
+            "msg": "Error en email o contraseña"
+        }), 401
 
-        user = User()
-        user.username = username
-        user.password = password
-        user.save()
+    access_token = create_access_token(identity=email)
+    return jsonify(access_token=access_token, usuarioID = user.id), 200
 
-        access_token = create_access_token(identity=user.id)
+# obtener todos los usuarios
+@app.route('/usuarios', methods=['GET'])
+# @jwt_required()
+def getUsuarios():
+    user = Usuarios.query.all()
+    user = list(map(lambda x: x.serialize(), user))
+    return jsonify(user), 200
 
-        datos = {
-            "access_token": access_token,
-            "user": user.serialize()
-        }
+# obtener los usuarios por ID
+@app.route('/usuarios/<id>', methods=['GET'])
+def getUsuarioById(id):
+    user = Usuarios.query.get(id)
+    return jsonify(user.serialize()),200
 
-        return jsonify(datos), 201 
+@app.route('/usuarios/<id>', methods=['DELETE'])
+def deleteUsuario(id):
+    user = Usuarios.query.get(id)
+    Usuarios.delete(user.id)
+    return jsonify(user.serialize()),200
+
+@app.route('/usuarios/<id>', methods=['PUT'])
+def updateUsuario(id):
+    user = Usuarios.query.get(id)
+
+    user.primerNombre = request.json.get('primerNombre')
+    user.segundoNombre = request.json.get('segundoNombre')
+    user.apellidoPaterno = request.json.get('apellidoPaterno')
+    user.apellidoMaterno = request.json.get('apellidoMaterno')
+    user.fono = request.json.get('fono')
+    user.email = request.json.get('email')
+    user.contrasena = request.json.get('contrasena')
+    
+    Usuarios.update(user)
+
+    return jsonify(user.serialize()),200
+
+@app.route('/usuarios/', methods=['POST'])
+def agregarUsuario():
+    user = Usuarios()
+
+    user.primerNombre = request.json.get('primerNombre')
+    user.segundoNombre = request.json.get('segundoNombre')
+    user.apellidoPaterno = request.json.get('apellidoPaterno')
+    user.apellidoMaterno = request.json.get('apellidoMaterno')
+    user.fono = request.json.get('fono')
+    user.email = request.json.get('email')
+    user.contrasena = request.json.get('contrasena')
+    
+    Usuarios.save(user)
+
+    return jsonify(user.serialize()),200
+
+# obtener todos los clientes
+
+@app.route('/clientes', methods=['GET'])
+def getClientes():
+    clientes = Clientes.query.all()
+    clientes = list(map(lambda x: x.serialize(), clientes))
+    return jsonify(clientes), 200
+
+@app.route('/clientes/<id>', methods=['GET'])
+def getClienteById(id):
+    cliente = Clientes.query.get(id)
+    return jsonify(cliente.serialize()),200
+
+@app.route('/clientes/<id>', methods=['DELETE'])
+def deleteCliente(id):
+    cliente = Usuarios.query.get(id)
+    Usuarios.delete(cliente.id)
+    return jsonify(cliente.serialize()),200
+
+@app.route('/clientes/<id>', methods=['PUT'])
+def updateCliente(id):
+    cliente = Clientes.query.get(id)
+
+    cliente.primerNombre = request.json.get('primerNombre')
+    cliente.segundoNombre = request.json.get('segundoNombre')
+    cliente.apellidoPaterno = request.json.get('apellidoPaterno')
+    cliente.apellidoMaterno = request.json.get('apellidoMaterno')
+    cliente.fono = request.json.get('fono')
+    cliente.email = request.json.get('email')
+    
+    Usuarios.update(cliente)
+
+    return jsonify(cliente.serialize()),200
+
+@app.route('/clientes', methods=['POST'])
+def agregarCliente():
+    cliente = Clientes()
+
+    cliente.primerNombre = request.json.get('primerNombre')
+    cliente.segundoNombre = request.json.get('segundoNombre')
+    cliente.apellidoPaterno = request.json.get('apellidoPaterno')
+    cliente.apellidoMaterno = request.json.get('apellidoMaterno')
+    cliente.fono = request.json.get('fono')
+    cliente.email = request.json.get('email')
+    
+    Usuarios.save(cliente)
+
+    return jsonify(cliente.serialize()),200
+
+
+
+
 
 if __name__ == '__main__':
     app.run()
